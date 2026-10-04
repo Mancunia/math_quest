@@ -1,0 +1,23 @@
+{
+  "name": "maths-quest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A maths game for kids aged 5-11, with a leaderboard saved in the browser.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.3.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  }
+}
