@@ -28,6 +28,7 @@
   --c-pattern: #3e9e2e;
   --c-fraction: #e0573a;
   --c-time: #7a5bd6;
+  --c-shapes: #0f7f9e;
   --c-mixed: #1d2846;
   --topic: var(--c-add);
   --display: "Baloo 2", "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif;
@@ -234,6 +235,42 @@ h2.section { font-family: var(--display); font-size: 1.6rem; margin: 0 0 12px; }
 .shape.wide { width: min(280px, 76vw); }
 .shape .sh { fill: var(--topic); stroke: var(--line); stroke-width: 3; }
 .shape .un { fill: var(--card); stroke: var(--line); stroke-width: 3; }
+
+/* Shapes: flat shapes, solids, angles, rectangles and labelled galleries */
+.geo .sh { stroke-width: 4; stroke-linejoin: round; }
+.symline { stroke: var(--ink); stroke-width: 3; stroke-dasharray: 9 6; }
+.vdot { fill: var(--sun); stroke: var(--line); stroke-width: 3; }
+.snum, .rlab { font-family: var(--display); font-weight: 800; fill: var(--ink); }
+.snum { font-size: 22px; }
+.rlab { font-size: 17px; }
+.solid .face { fill: var(--topic); }
+.solid .f1 { filter: brightness(1.2); }
+.solid .f2 { filter: brightness(0.8); }
+.edge { stroke: var(--line); stroke-width: 4; stroke-linecap: round; }
+.edge.thin { fill: none; stroke-width: 2; }
+.hid { fill: none; stroke: var(--line); stroke-width: 2.5; stroke-dasharray: 7 6; }
+.lite { fill: #fff; opacity: 0.28; }
+.angle .wedge { fill: var(--topic); opacity: 0.85; }
+.angle .arm { stroke: var(--ink); stroke-width: 6; stroke-linecap: round; }
+.angle .refline { fill: none; stroke: var(--muted); stroke-width: 3; stroke-dasharray: 6 6; }
+.angle .hubdot { fill: var(--ink); }
+.gridl { stroke: var(--line); stroke-width: 2; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 10px; width: 100%; max-width: 620px; }
+.gallery figure, .named { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.gallery .shape.mini { width: 100%; max-width: 96px; }
+.gallery .angle.mini { max-width: 120px; }
+.gallery figcaption, .named figcaption { font-weight: 800; font-size: 0.9rem; text-align: center; line-height: 1.2; }
+.gallery figcaption small { display: block; color: var(--muted); font-size: 0.72rem; }
+
+/* Lesson cards before a round */
+.lesson h2 { font-family: var(--display); margin: 0 0 4px; font-size: 1.8rem; line-height: 1.1; }
+.lesson .boardhead { margin-bottom: 12px; }
+.lcard h3 { font-family: var(--display); font-size: clamp(1.4rem, 5vw, 1.9rem); line-height: 1.1; margin: 4px 0 12px; }
+.lcard p { font-size: 1.15rem; font-weight: 700; margin: 12px auto 0; max-width: 34em; text-wrap: pretty; }
+.lstep { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.ldots { display: flex; justify-content: center; gap: 8px; margin: 16px 0; }
+.ldots span { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line); background: var(--card); }
+.ldots span.on { background: var(--topic); }
 
 /* Results */
 .results { text-align: center; }

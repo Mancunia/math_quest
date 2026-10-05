@@ -19,6 +19,7 @@ export const TOPICS: Topic[] = [
   { id: "pattern", name: "Number Patterns", sym: "2 4 6", blurb: "What comes next?" },
   { id: "fraction", name: "Fractions", sym: "½ ¼", blurb: "Parts of a whole" },
   { id: "time", name: "Telling Time", sym: "3:30", blurb: "Read the clock" },
+  { id: "shapes", name: "Shapes", sym: "▲■", blurb: "Sides, corners and solids" },
   { id: "mixed", name: "Mixed Challenge", sym: "★", blurb: "A bit of everything" },
 ];
 

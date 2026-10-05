@@ -10,6 +10,7 @@ export type TopicId =
   | "pattern"
   | "fraction"
   | "time"
+  | "shapes"
   | "mixed";
 
 export type Level = 0 | 1 | 2;
@@ -17,6 +18,13 @@ export type Mode = "ten" | "race";
 export type InputMode = "tap" | "type";
 /** "system" follows the device setting. */
 export type Theme = "system" | "light" | "dark";
+
+/** Flat shapes. Their facts and drawings live in lib/shapes.ts. */
+export type Shape2D =
+  | "circle" | "triangle" | "isosceles" | "square" | "rectangle"
+  | "pentagon" | "hexagon" | "heptagon" | "octagon";
+/** Solid (3D) shapes. */
+export type Solid = "cube" | "cuboid" | "sphere" | "cylinder" | "cone" | "pyramid" | "prism" | "tetrahedron";
 
 /** Pictures that go with a question or a hint. Rendered by components/Visual.tsx. */
 export type Visual =
@@ -36,7 +44,26 @@ export type Visual =
   /** A number pattern with the gaps between neighbours marked. */
   | { type: "pattern"; seq: (number | null)[] }
   /** The crocodile rule for <, > and =. */
-  | { type: "croc" };
+  | { type: "croc" }
+  /** A flat shape. `marks` numbers its sides, dots its corners or draws its lines of symmetry. */
+  | { type: "shape2d"; shape: Shape2D; marks?: "sides" | "corners" | "symmetry"; label?: boolean }
+  /** A solid shape. `marks` dots its vertices. */
+  | { type: "solid"; solid: Solid; marks?: "vertices"; label?: boolean }
+  /** An angle in degrees. `ref` adds a faint right angle to compare with. */
+  | { type: "angle"; deg: number; ref?: boolean }
+  /** A rectangle with two of its side lengths, all four, or a grid of 1 cm squares. */
+  | { type: "rect"; w: number; h: number; show: "sides" | "all" | "grid" }
+  /** A row of labelled shapes, for lessons. */
+  | { type: "gallery"; items: (Shape2D | Solid)[] }
+  /** Four angles side by side, named, for lessons. */
+  | { type: "angles" };
+
+/** One card of a lesson shown before a round. */
+export interface Lesson {
+  title: string;
+  text: string;
+  visual?: Visual;
+}
 
 /**
  * Text fields may contain two tokens, rendered by components/RichText.tsx:

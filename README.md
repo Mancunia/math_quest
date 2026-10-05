@@ -1,6 +1,6 @@
 # Maths Quest
 
-A maths game for kids aged 5 to 11, built with Next.js. Each child can have a player profile that keeps their stars and progress, and scores go on a shared leaderboard. Everything is saved in the browser, so nothing needs a server, a database or an online account.
+A maths game for kids aged 5 to 11, built with Next.js. Each child can have a player profile that keeps their stars and progress, and scores go on a shared leaderboard. Everything is saved in the browser, so nothing needs a server, a database or an online account. Anonymous visit counts are collected with Vercel Web Analytics (see [Analytics](#analytics)).
 
 ## Setup
 
@@ -52,6 +52,8 @@ The whole game is one client-side React component. `app/page.tsx` renders `<Game
 
 ```
 players ─▶ home ─▶ tables (Times Tables only) ─▶ play ─▶ results
+             │                                    ▲
+             ├─▶ lesson (topics with one) ────────┘
              │                                              │
              ├─▶ leaderboard ◀──────────────────────────────┘
              └─▶ progress
@@ -90,10 +92,13 @@ Every key in `localStorage` starts with `mq_` (see `lib/storage.ts`). Reads and 
 
 - To make a topic easier or harder, edit its generator in `lib/questions.ts`. Each one gets the level (`0`, `1` or `2`) and the chosen times tables.
 - To add a topic, add its id to `TopicId` in `lib/types.ts`, an entry to `TOPICS` in `lib/topics.ts`, and a generator with the same id in `lib/questions.ts`. TypeScript will flag anything missing. Run `npm run typecheck` to check.
+- To give a topic a lesson, add a list of cards for each level (Easy, Medium, Hard) to `LESSONS` in `lib/lessons.ts`. Each card has a title, some text and an optional picture. Picking the topic then shows the lesson first; **Play again** and **Practise my mistakes** skip it.
+- Shape facts (sides, symmetry, faces, edges, vertices) and their drawings live in `lib/shapes.ts`, so a picture and its answer always agree.
 
 ## What's in the game
 
-- **12 topics:** addition, subtraction, multiplication, division, times tables (choose which ones), counting, bigger or smaller (<, >, =), missing number, number patterns, fractions, telling time, and a mixed challenge.
+- **13 topics:** addition, subtraction, multiplication, division, times tables (choose which ones), counting, bigger or smaller (<, >, =), missing number, number patterns, fractions, telling time, shapes, and a mixed challenge.
+- **Shapes** follows the school curriculum: Easy names flat shapes and counts sides and corners; Medium adds shapes up to 8 sides, 3D shape names and lines of symmetry; Hard covers faces, edges and vertices, acute/right/obtuse/reflex angles, perimeter and area. Each round starts with a short picture lesson for the chosen level, with a **Skip to the quiz** button.
 - **3 levels:** Easy (ages 5–6), Medium (7–8) and Hard (9–11).
 - **2 game types:** 10 questions at your own pace, or a 60-second race.
 - **2 ways to answer:** tap one of 4 answers, or type on a number pad (keyboard works too).
@@ -103,11 +108,29 @@ Every key in `localStorage` starts with `mq_` (see `lib/storage.ts`). Reads and 
 - **Practise my mistakes** replays just the questions a child got wrong.
 - **How to play** (button at the top, or the link on the home screen) walks through the steps, levels, topics, keyboard shortcuts and common questions.
 
+## Analytics
+
+Traffic is measured with [Vercel Web Analytics](https://vercel.com/docs/analytics) (`@vercel/analytics`). It uses no cookies and stores nothing in the browser.
+
+- `<Analytics />` in `app/layout.tsx` records page views: visitors, referrers, countries and devices.
+- `lib/analytics.ts` sends custom events from `components/Game.tsx`:
+
+| Event | When | Properties |
+| --- | --- | --- |
+| `screen_view` | A screen opens | `screen` (home, play, results, leaderboard…) |
+| `round_start` | A round begins | `topic`, `level`, `mode`, `practice` |
+| `round_finish` | A round ends | the above plus `score`, `answered`, `stars` |
+| `profile_created` | A new player profile is made | none |
+
+Names, profile ids, PINs and leaderboard entries are never sent. Add new events to `lib/analytics.ts` and keep them anonymous.
+
+Data only arrives when the app is deployed on Vercel with **Analytics** enabled in the project dashboard. Custom events need a Pro plan; on Hobby only page views show. In `npm run dev` nothing is sent: events are logged to the browser console instead.
+
 ## Player profiles
 
 - **Who's playing?** Tap the player button at the top to pick a profile, make a new one (name, picture and an optional 4-number PIN), or play as a guest.
 - Each profile keeps its own settings, best stars and a history of every game, practice rounds included. The last player is remembered next time.
-- **My progress** shows stars (out of 108), games played, how many answers were right, days played in a row, stars for every topic at each level, topics worth practising, and recent games. It's also where you change your name, picture or PIN, or delete the profile.
+- **My progress** shows stars (out of 117), games played, how many answers were right, days played in a row, stars for every topic at each level, topics worth practising, and recent games. It's also where you change your name, picture or PIN, or delete the profile.
 - A PIN is asked for again in each new browser session. It stops brothers and sisters mixing up profiles; it is not a password. **Forgot the PIN?** answers a grown-up multiplication question to remove it.
 - Deleting a profile removes its stars, history and leaderboard scores.
 - If a name was saved before profiles existed, that player becomes the first profile and keeps their stars and scores.
@@ -140,12 +163,16 @@ components/
   Progress.tsx    a player's stats, stars and recent games
   HowTo.tsx       how-to-play guide and FAQ
   Segment.tsx     the row-of-buttons picker used in settings
-  Visual.tsx      clock, fraction shapes, dots, blocks, objects
+  Lesson.tsx      picture lesson cards shown before a round
+  Visual.tsx      clock, fraction shapes, dots, blocks, objects, 2D/3D shapes, angles
   RichText.tsx    blanks and stacked fractions in question text
 lib/
   questions.ts    question generators for every topic and level
   topics.ts       topic list, levels, timings, star rules
+  lessons.ts      lesson cards per topic and level
+  shapes.ts       shape facts and drawing points
   storage.ts      localStorage settings, best stars, leaderboard
+  analytics.ts    anonymous Vercel Web Analytics events
   profiles.ts     player profiles, game history, progress stats
   effects.ts      sounds and confetti
   types.ts        shared types

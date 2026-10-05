@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { Visual as V } from "@/lib/types";
+import type { Shape2D, Solid, Visual as V } from "@/lib/types";
+import { ANGLE_RULE, FLAT, SOLIDS, angleKind, capital, isSolid, shapeName, sideLabels, type Pt } from "@/lib/shapes";
 
 const pt = (deg: number, r: number) => {
   const a = (deg * Math.PI) / 180;
@@ -280,6 +281,167 @@ function Croc() {
   );
 }
 
+const pts = (p: readonly Pt[]) => p.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+
+function Flat({ shape, marks, mini }: { shape: Shape2D; marks?: "sides" | "corners" | "symmetry"; mini?: boolean }) {
+  const f = FLAT[shape];
+  const what = marks === "sides" ? `, with its ${f.sides} sides numbered` : marks === "corners" ? `, with its ${f.sides} corners marked` : marks === "symmetry" ? `, with its ${f.symmetry} lines of symmetry drawn` : "";
+  return (
+    <svg className={`shape geo${mini ? " mini" : ""}`} viewBox="-16 -16 232 232" role="img" aria-label={`A ${f.name}${what}`}>
+      {shape === "circle" ? <circle className="sh" cx="100" cy="100" r="82" /> : <polygon className="sh" points={pts(f.points)} />}
+      {marks === "symmetry" && f.lines.map(([a, b], i) => <line key={i} className="symline" x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} />)}
+      {marks === "corners" && f.points.map(([x, y], i) => <circle key={i} className="vdot" cx={x} cy={y} r="9" />)}
+      {marks === "sides" &&
+        sideLabels(f.points).map(([x, y], i) => (
+          <text key={i} className="snum" x={x} y={y} textAnchor="middle" dominantBaseline="central">{i + 1}</text>
+        ))}
+    </svg>
+  );
+}
+
+function SolidShape({ solid, marks, mini }: { solid: Solid; marks?: "vertices"; mini?: boolean }) {
+  const s = SOLIDS[solid];
+  const label = `A ${s.name}${marks ? `, with its ${s.vertices} vertices marked` : ""}`;
+  let body: React.ReactNode;
+  if (solid === "sphere") {
+    body = (
+      <>
+        <circle className="sh" cx="100" cy="100" r="80" />
+        <path className="hid" d="M20,100 A80,22 0 0 1 180,100" />
+        <path className="edge thin" d="M20,100 A80,22 0 0 0 180,100" />
+        <ellipse className="lite" cx="72" cy="66" rx="18" ry="12" />
+      </>
+    );
+  } else if (solid === "cylinder") {
+    body = (
+      <>
+        <path className="sh" d="M40,46 L40,154 A60,18 0 0 0 160,154 L160,46 Z" />
+        <path className="hid" d="M40,154 A60,18 0 0 1 160,154" />
+        <ellipse className="sh" cx="100" cy="46" rx="60" ry="18" />
+        <ellipse className="lite" cx="100" cy="46" rx="60" ry="18" />
+      </>
+    );
+  } else if (solid === "cone") {
+    body = (
+      <>
+        <path className="sh" d="M40,156 L100,26 L160,156 A60,18 0 0 1 40,156 Z" />
+        <path className="hid" d="M40,156 A60,18 0 0 1 160,156" />
+      </>
+    );
+  } else {
+    body = (
+      <>
+        {s.fronts.map((f, i) => <polygon key={i} className={`face f${i}`} points={pts(f)} />)}
+        {s.hidden.map(([a, b], i) => <line key={`h${i}`} className="hid" x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} />)}
+        {s.seen.map(([a, b], i) => <line key={`e${i}`} className="edge" x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} />)}
+        {marks && s.corners.map(([x, y], i) => <circle key={`v${i}`} className="vdot" cx={x} cy={y} r="8" />)}
+      </>
+    );
+  }
+  return (
+    <svg className={`shape geo solid${mini ? " mini" : ""}`} viewBox="-10 -10 220 220" role="img" aria-label={label}>
+      {body}
+    </svg>
+  );
+}
+
+function Angle({ deg, withRef, mini }: { deg: number; withRef?: boolean; mini?: boolean }) {
+  const V: Pt = [100, 110], r = 84, a = 48;
+  const end = (len: number, d = deg): Pt => [V[0] + len * Math.cos((d * Math.PI) / 180), V[1] - len * Math.sin((d * Math.PI) / 180)];
+  const [ax, ay] = end(a), [ex, ey] = end(r);
+  const kind = angleKind(deg);
+  return (
+    <svg className={`shape geo angle${mini ? " mini" : ""}`} viewBox="0 0 200 200" role="img" aria-label={mini ? `A ${kind} angle` : "An angle between two lines"}>
+      {deg === 90 ? (
+        <path className="wedge" d={`M${V[0]},${V[1]} h30 v-30 h-30 Z`} />
+      ) : (
+        <path className="wedge" d={`M${V[0]},${V[1]} L${V[0] + a},${V[1]} A${a},${a} 0 ${deg > 180 ? 1 : 0} 0 ${ax.toFixed(1)},${ay.toFixed(1)} Z`} />
+      )}
+      {withRef && deg !== 90 && (
+        <>
+          <line className="refline" x1={V[0]} y1={V[1]} x2={V[0]} y2={V[1] - r} />
+          <path className="refline" d={`M${V[0] + 16},${V[1]} v-16 h-16`} />
+        </>
+      )}
+      <line className="arm" x1={V[0]} y1={V[1]} x2={V[0] + r} y2={V[1]} />
+      <line className="arm" x1={V[0]} y1={V[1]} x2={ex.toFixed(1)} y2={ey.toFixed(1)} />
+      <circle className="hubdot" cx={V[0]} cy={V[1]} r="5" />
+    </svg>
+  );
+}
+
+function Angles() {
+  return (
+    <div className="gallery" role="group" aria-label="Four types of angle">
+      {[45, 90, 135, 250].map((d) => {
+        const k = angleKind(d);
+        return (
+          <figure key={d}>
+            <Angle deg={d} mini />
+            <figcaption>{capital(k)}<small>{ANGLE_RULE[k]}</small></figcaption>
+          </figure>
+        );
+      })}
+    </div>
+  );
+}
+
+function Rect({ w, h, show }: { w: number; h: number; show: "sides" | "all" | "grid" }) {
+  const u = Math.min(220 / w, 130 / h, 34);
+  const W = w * u, H = h * u;
+  return (
+    <svg
+      className="shape wide geo"
+      viewBox={`-46 -28 ${W + 92} ${H + 56}`}
+      role="img"
+      aria-label={show === "grid" ? `A rectangle covered by ${h} rows of ${w} squares` : `A rectangle ${w} cm long and ${h} cm wide`}
+    >
+      <rect className="sh" x="0" y="0" width={W} height={H} />
+      {show === "grid" && (
+        <>
+          {Array.from({ length: w - 1 }, (_, i) => <line key={`x${i}`} className="gridl" x1={(i + 1) * u} y1="0" x2={(i + 1) * u} y2={H} />)}
+          {Array.from({ length: h - 1 }, (_, i) => <line key={`y${i}`} className="gridl" x1="0" y1={(i + 1) * u} x2={W} y2={(i + 1) * u} />)}
+        </>
+      )}
+      {show !== "grid" && (
+        <>
+          <text className="rlab" x={W / 2} y="-9" textAnchor="middle">{w} cm</text>
+          <text className="rlab" x={W + 8} y={H / 2} dominantBaseline="central">{h} cm</text>
+          {show === "all" && (
+            <>
+              <text className="rlab" x={W / 2} y={H + 21} textAnchor="middle">{w} cm</text>
+              <text className="rlab" x="-8" y={H / 2} textAnchor="end" dominantBaseline="central">{h} cm</text>
+            </>
+          )}
+        </>
+      )}
+    </svg>
+  );
+}
+
+function Gallery({ items }: { items: (Shape2D | Solid)[] }) {
+  return (
+    <div className="gallery" role="group" aria-label="Shapes with their names">
+      {items.map((s) => (
+        <figure key={s}>
+          {isSolid(s) ? <SolidShape solid={s} mini /> : <Flat shape={s} mini />}
+          <figcaption>{capital(shapeName(s))}</figcaption>
+        </figure>
+      ))}
+    </div>
+  );
+}
+
+function Named({ children, name }: { children: React.ReactNode; name?: string }) {
+  if (!name) return <>{children}</>;
+  return (
+    <figure className="named">
+      {children}
+      <figcaption>{capital(name)}</figcaption>
+    </figure>
+  );
+}
+
 export default function Visual({ v }: { v: V }) {
   switch (v.type) {
     case "clock": return <Clock h={v.h} m={v.m} minutes={v.minutes} />;
@@ -294,5 +456,11 @@ export default function Visual({ v }: { v: V }) {
     case "line": return <Line from={v.from} to={v.to} />;
     case "pattern": return <Pattern seq={v.seq} />;
     case "croc": return <Croc />;
+    case "shape2d": return <Named name={v.label ? FLAT[v.shape].name : undefined}><Flat shape={v.shape} marks={v.marks} /></Named>;
+    case "solid": return <Named name={v.label ? SOLIDS[v.solid].name : undefined}><SolidShape solid={v.solid} marks={v.marks} /></Named>;
+    case "angle": return <Angle deg={v.deg} withRef={v.ref} />;
+    case "angles": return <Angles />;
+    case "rect": return <Rect w={v.w} h={v.h} show={v.show} />;
+    case "gallery": return <Gallery items={v.items} />;
   }
 }
