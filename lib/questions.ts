@@ -1,5 +1,6 @@
-import type { Choice, Level, Question, TopicId } from "./types";
+import type { Choice, Level, Question, Shape2D, Solid, TopicId } from "./types";
 import { topicById } from "./topics";
+import { ANGLE_RULE, FLAT, SOLIDS, capital } from "./shapes";
 
 /* ---------- helpers ---------- */
 export const rnd = (a: number, b: number) => Math.floor(Math.random() * (b - a + 1)) + a;
@@ -53,6 +54,9 @@ const OBJECTS: [string, string][] = [
   ["🍎", "apples"], ["⭐", "stars"], ["🐞", "ladybirds"], ["🐟", "fish"], ["🌼", "flowers"],
   ["🚗", "cars"], ["🎈", "balloons"], ["🐥", "chicks"], ["🍓", "strawberries"], ["⚽", "balls"],
 ];
+
+const EASY_FLAT: Shape2D[] = ["circle", "triangle", "square", "rectangle", "pentagon", "hexagon"];
+const MEDIUM_SOLIDS: Solid[] = ["cube", "cuboid", "sphere", "cylinder", "cone", "pyramid"];
 
 /* ---------- generators ---------- */
 type Gen = (L: Level, tables: number[]) => Question;
@@ -302,8 +306,119 @@ const G: Record<TopicId, Gen> = {
       review: later ? `${now} + ${later} minutes` : `Clock showing ${now}`,
     };
   },
+  shapes(L) {
+    // Easy: name flat shapes, count sides and corners. Medium: up to 8 sides, 3D names, symmetry.
+    // Hard: faces, edges and vertices, angle types, perimeter and area.
+    const nameQ = (shape: Shape2D, pool: Shape2D[]): Question => {
+      const f = FLAT[shape];
+      const wrong = shuffle(pool.filter((s) => s !== shape)).slice(0, 3);
+      return {
+        text: "What is this shape called?", answer: capital(f.name), kind: "choice", long: true, key: `n-${shape}`,
+        visual: { type: "shape2d", shape },
+        choices: shuffle([shape, ...wrong]).map((s) => ({ v: capital(FLAT[s].name), label: capital(FLAT[s].name) })),
+        hint: "Count the straight sides. 3 is a triangle, 4 the same length is a square, 4 with two long and two short is a rectangle, 5 is a pentagon, 6 is a hexagon. A circle has none.",
+        hintVisual: { type: "shape2d", shape, marks: "sides" },
+        explain: f.sides ? `It is a ${f.name}. It has ${f.sides} straight sides.` : "It is a circle. It is round, with no straight sides and no corners.",
+        review: `Name the ${f.name}`,
+      };
+    };
+    const countQ = (shape: Shape2D, what: "sides" | "corners"): Question => {
+      const f = FLAT[shape];
+      return num(`How many ${what} does this ${f.name} have?`, f.sides, {
+        visual: { type: "shape2d", shape }, long: true, key: `${what}-${shape}`,
+        hint: what === "sides"
+          ? "Sides are the straight lines. Put your finger on one and count each side as you go round."
+          : "Corners are where two sides meet. Count each pointy bit as you go round.",
+        hintVisual: { type: "shape2d", shape, marks: what },
+        explain: `A ${f.name} has ${f.sides} sides and ${f.sides} corners.`,
+        review: `${capital(what)} of a ${f.name}`,
+      });
+    };
+
+    if (L === 0) {
+      if (Math.random() < 0.5) return nameQ(pick(EASY_FLAT), EASY_FLAT);
+      return countQ(pick(["triangle", "square", "rectangle", "pentagon", "hexagon"] as const), pick(["sides", "corners"] as const));
+    }
+
+    if (L === 1) {
+      const k = pick(["count", "count", "solid", "symmetry"] as const);
+      if (k === "count") {
+        return countQ(pick(["triangle", "square", "rectangle", "pentagon", "hexagon", "heptagon", "octagon"] as const), pick(["sides", "corners"] as const));
+      }
+      if (k === "solid") {
+        const solid = pick(MEDIUM_SOLIDS);
+        const wrong = shuffle(MEDIUM_SOLIDS.filter((s) => s !== solid)).slice(0, 3);
+        return {
+          text: "What is this 3D shape called?", answer: capital(SOLIDS[solid].name), kind: "choice", long: true, key: `3d-${solid}`,
+          visual: { type: "solid", solid },
+          choices: shuffle([solid, ...wrong]).map((s) => ({ v: capital(SOLIDS[s].name), label: capital(SOLIDS[s].name) })),
+          hint: "Look at the faces. A cube's are all squares; a cuboid's are rectangles. A sphere is a ball, a cylinder is like a tin, a cone is like an ice-cream cone, and a pyramid comes to a point.",
+          explain: `It is a ${SOLIDS[solid].name}.`,
+          review: `Name the ${SOLIDS[solid].name}`,
+        };
+      }
+      const shape = pick(["square", "rectangle", "triangle", "isosceles", "pentagon", "hexagon"] as const);
+      const f = FLAT[shape];
+      return num("How many lines of symmetry does this shape have?", f.symmetry, {
+        visual: { type: "shape2d", shape }, long: true, key: `sym-${shape}`,
+        hint: "A line of symmetry folds the shape into two halves that match exactly. Try folding it in your head: across, up and down, and corner to corner.",
+        hintVisual: { type: "shape2d", shape, marks: "symmetry" },
+        explain: `This ${shape === "isosceles" ? "triangle has two equal sides, so it" : f.name} has ${f.symmetry} line${f.symmetry === 1 ? "" : "s"} of symmetry.`,
+        review: `Lines of symmetry in a ${shape === "isosceles" ? "triangle with two equal sides" : f.name}`,
+      });
+    }
+
+    const k = pick(["solid", "solid", "angle", "perimeter", "area"] as const);
+    if (k === "solid") {
+      const solid = pick(["cube", "cuboid", "pyramid", "prism", "tetrahedron"] as const);
+      const s = SOLIDS[solid];
+      const what = pick(["faces", "edges", "vertices"] as const);
+      return num(`How many ${what} does this ${s.name} have?`, s[what], {
+        visual: { type: "solid", solid }, long: true, key: `${what}-${solid}`,
+        hint: what === "faces"
+          ? "Faces are the flat surfaces. Count the ones you can see, then the ones hidden at the back and underneath."
+          : what === "edges"
+            ? "Edges are the lines where two faces meet. Count the solid lines and the dashed hidden ones."
+            : "Vertices are the corners, where edges meet. Count every dot.",
+        hintVisual: { type: "solid", solid, marks: what === "vertices" ? "vertices" : undefined },
+        explain: `A ${s.name} has ${s.faces} faces, ${s.edges} edges and ${s.vertices} vertices.`,
+        review: `${capital(what)} of a ${s.name}`,
+      });
+    }
+    if (k === "angle") {
+      const kind = pick(["acute", "right", "obtuse", "reflex"] as const);
+      const deg = kind === "acute" ? 5 * rnd(4, 15) : kind === "right" ? 90 : kind === "obtuse" ? 5 * rnd(21, 33) : 5 * rnd(40, 66);
+      return {
+        text: "What type of angle is this?", answer: capital(kind), kind: "choice", long: true, key: `a${deg}`,
+        visual: { type: "angle", deg },
+        choices: (["acute", "right", "obtuse", "reflex"] as const).map((v) => ({ v: capital(v), label: capital(v) })),
+        hint: "Compare it with the dashed right angle (a square corner). Smaller is acute. Bigger, but less than a straight line, is obtuse. More than a straight line is reflex.",
+        hintVisual: { type: "angle", deg, ref: true },
+        explain: `This angle is ${deg}°, which is ${ANGLE_RULE[kind]}, so it is ${kind === "acute" ? "an acute" : `a ${kind}`} angle.`,
+        review: `Angle of ${deg}°`,
+      };
+    }
+    if (k === "perimeter") {
+      const w = rnd(3, 12), h = rnd(2, Math.min(8, w - 1));
+      return num("What is the perimeter of this rectangle? __ cm", 2 * (w + h), {
+        visual: { type: "rect", w, h, show: "sides" }, long: true, key: `p${w}x${h}`,
+        hint: `The perimeter is the distance all the way round. Opposite sides are the same length, so add ${w} + ${h} + ${w} + ${h}.`,
+        hintVisual: { type: "rect", w, h, show: "all" },
+        explain: `${w} + ${h} + ${w} + ${h} = ${2 * (w + h)} cm`,
+        review: `Perimeter of a ${w} cm by ${h} cm rectangle`,
+      });
+    }
+    const w = rnd(2, 9), h = rnd(2, 6);
+    return num("Each square is 1 cm². What is the area? __ cm²", w * h, {
+      visual: { type: "rect", w, h, show: "grid" }, long: true, key: `ar${w}x${h}`,
+      hint: `Area is the number of squares inside. Count the squares in one row, then the rows: ${h} rows of ${w}.`,
+      hintVisual: { type: "jumps", step: w, count: h, ask: "last" },
+      explain: `${h} rows of ${w} squares: ${w} × ${h} = ${w * h} cm²`,
+      review: `Area of a ${w} by ${h} rectangle`,
+    });
+  },
   mixed(L, tables) {
-    const t = pick(["add", "sub", "mul", "div", "missing", "compare", "pattern", "fraction", "time"] as const);
+    const t = pick(["add", "sub", "mul", "div", "missing", "compare", "pattern", "fraction", "time", "shapes"] as const);
     const q = G[t](L, tables);
     q.tag = topicById(t).name;
     return q;

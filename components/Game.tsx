@@ -9,8 +9,11 @@ import Leaderboard from "./Leaderboard";
 import Players from "./Players";
 import Progress from "./Progress";
 import HowTo from "./HowTo";
+import Lesson from "./Lesson";
 import { starsFor } from "@/lib/topics";
+import { LESSONS } from "@/lib/lessons";
 import { confetti, sfx } from "@/lib/effects";
+import { trackProfileCreated, trackRoundFinish, trackRoundStart, trackScreen } from "@/lib/analytics";
 import {
   DEFAULT_SETTINGS, addLeaderEntry, applyTheme, bestKey, clearLeaderboard, filterEntries, loadBest, loadLeaderboard,
   loadSettings, saveBest, saveSettings, type BestStars, type LeaderFilter,
@@ -25,7 +28,7 @@ const NEXT_THEME: Record<Theme, Theme> = { system: "light", light: "dark", dark:
 const THEME_ICON: Record<Theme, string> = { system: "🌗", light: "☀️", dark: "🌙" };
 const THEME_LABEL: Record<Theme, string> = { system: "Auto", light: "Light", dark: "Dark" };
 
-type Screen = "home" | "tables" | "play" | "results" | "leaderboard" | "players" | "progress" | "howto";
+type Screen = "home" | "tables" | "lesson" | "play" | "results" | "leaderboard" | "players" | "progress" | "howto";
 
 interface Run {
   id: number;
@@ -47,6 +50,7 @@ export default function Game() {
   const [stars, setStars] = useState(0);
   const [placement, setPlacement] = useState<Placement | null>(null);
   const [boardFrom, setBoardFrom] = useState<Screen>("home");
+  const [lessonTopic, setLessonTopic] = useState<TopicId | null>(null);
   const [boardFilter, setBoardFilter] = useState<LeaderFilter>({ mode: "ten", level: "all", topic: "all" });
 
   const pid = profile?.id ?? null;
@@ -81,6 +85,7 @@ export default function Game() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    trackScreen(screen);
   }, [screen]);
 
   const update = (patch: Partial<Settings>) =>
@@ -92,8 +97,18 @@ export default function Game() {
 
   const start = (topic: TopicId, queue?: Question[]) => {
     setRun({ id: Date.now(), topic, queue, settings });
+    trackRoundStart({ topic, level: settings.level, mode: settings.mode, practice: !!queue });
     setPlacement(null);
     setScreen("play");
+  };
+
+  /** Picking a topic: Times Tables asks which tables, a topic with a lesson shows it first, others start. */
+  const choose = (t: TopicId) => {
+    if (t === "tables") setScreen("tables");
+    else if (LESSONS[t]) {
+      setLessonTopic(t);
+      setScreen("lesson");
+    } else start(t);
   };
 
   const record = (name: string, r: RoundResult, s: number, current: LeaderEntry[]) => {
@@ -112,6 +127,7 @@ export default function Game() {
     const s = starsFor(r.mode, r.level, r.score, r.answered);
     setResult(r);
     setStars(s);
+    trackRoundFinish({ ...r, stars: s });
     if (profile && r.answered > 0) {
       const game: GameRecord = {
         date: Date.now(), topic: r.topic, level: r.level, mode: r.mode, score: r.score, answered: r.answered,
@@ -149,6 +165,7 @@ export default function Game() {
   const create = (d: ProfileDraft) => {
     const { profile: p, list } = createProfile(d);
     setProfiles(list);
+    trackProfileCreated();
     pick(p);
   };
 
@@ -247,7 +264,7 @@ export default function Game() {
             best={best}
             profile={profile}
             onChange={update}
-            onPick={(t) => (t === "tables" ? setScreen("tables") : start(t))}
+            onPick={choose}
             onPlayers={() => setScreen("players")}
             onProgress={() => setScreen("progress")}
             onHowTo={() => setScreen("howto")}
@@ -260,6 +277,17 @@ export default function Game() {
             onChange={(tables) => update({ tables })}
             onBack={() => setScreen("home")}
             onStart={() => start("tables")}
+          />
+        )}
+
+        {screen === "lesson" && lessonTopic && LESSONS[lessonTopic] && (
+          <Lesson
+            key={`${lessonTopic}-${settings.level}`}
+            topic={lessonTopic}
+            level={settings.level}
+            cards={LESSONS[lessonTopic][settings.level]}
+            onStart={() => start(lessonTopic)}
+            onBack={() => setScreen("home")}
           />
         )}
 
@@ -315,7 +343,7 @@ export default function Game() {
             profiles={profiles}
             best={best}
             games={games}
-            onPlay={(t) => (t === "tables" ? setScreen("tables") : start(t))}
+            onPlay={choose}
             onEdit={edit}
             onDelete={remove}
             onBack={() => setScreen("home")}

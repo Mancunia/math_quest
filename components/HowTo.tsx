@@ -10,7 +10,7 @@ interface Props {
 const STEPS = [
   { icon: "👤", title: "Pick who's playing", text: "Tap the player button at the top. Choose your profile, make a new one, or play as a guest." },
   { icon: "🎚️", title: "Choose your settings", text: "Pick a level, a game type (10 questions or a 60-second race) and how you want to answer." },
-  { icon: "🧩", title: "Pick a topic", text: "Tap a topic card to start. For Times Tables you choose which tables first." },
+  { icon: "🧩", title: "Pick a topic", text: "Tap a topic card to start. For Times Tables you choose which tables first. Shapes starts with a short picture lesson, which you can skip." },
   { icon: "✏️", title: "Answer the questions", text: "Tap one of the 4 answers, or type your answer on the number pad and press ✓." },
   { icon: "⭐", title: "Earn stars", text: "See your stars at the end, then play again, practise your mistakes or check the leaderboard." },
 ];
